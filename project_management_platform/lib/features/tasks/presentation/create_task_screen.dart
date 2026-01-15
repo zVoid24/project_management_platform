@@ -43,85 +43,108 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
               ).showSnackBar(SnackBar(content: Text(state.message)));
             }
           },
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(labelText: 'Task Title'),
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _descController,
-                    decoration: const InputDecoration(labelText: 'Description'),
-                    maxLines: 3,
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _rateController,
-                    decoration: const InputDecoration(
-                      labelText: 'Hourly Rate (\$)',
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Add a new task',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
-                    keyboardType: TextInputType.number,
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  BlocBuilder<DeveloperListBloc, DeveloperListState>(
-                    builder: (context, state) {
-                      if (state is DeveloperListLoading) {
-                        return const LinearProgressIndicator();
-                      } else if (state is DeveloperListLoaded) {
-                        return DropdownButtonFormField<User>(
-                          decoration: const InputDecoration(
-                            labelText: 'Assign Developer',
+                    const SizedBox(height: 8),
+                    Text(
+                      'Set expectations and assign it to the right developer.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6),
                           ),
-                          items: state.developers.map((user) {
-                            return DropdownMenuItem(
-                              value: user,
-                              child: Text(user.email),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            setState(() => _selectedDeveloper = val);
+                    ),
+                    const SizedBox(height: 24),
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(labelText: 'Task Title'),
+                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _descController,
+                      decoration: const InputDecoration(labelText: 'Description'),
+                      maxLines: 3,
+                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _rateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Hourly Rate (\$)',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (v) => v!.isEmpty ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    BlocBuilder<DeveloperListBloc, DeveloperListState>(
+                      builder: (context, state) {
+                        if (state is DeveloperListLoading) {
+                          return const LinearProgressIndicator();
+                        } else if (state is DeveloperListLoaded) {
+                          return DropdownButtonFormField<User>(
+                            decoration: const InputDecoration(
+                              labelText: 'Assign Developer',
+                            ),
+                            items: state.developers.map((user) {
+                              return DropdownMenuItem(
+                                value: user,
+                                child: Text(user.email),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              setState(() => _selectedDeveloper = val);
+                            },
+                            validator: (v) => v == null ? 'Required' : null,
+                          );
+                        } else if (state is DeveloperListError) {
+                          return Text(
+                            'Error loading developers: ${state.message}',
+                          );
+                        }
+                        return const SizedBox();
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    Builder(
+                      builder: (ctx) {
+                        return FilledButton(
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              final task = Task(
+                                id: 0, // Ignored by create
+                                title: _titleController.text,
+                                description: _descController.text,
+                                hourlyRate: double.parse(_rateController.text),
+                                assigneeId: _selectedDeveloper!.id,
+                                projectId: widget.projectId,
+                                status: TaskStatus.todo,
+                              );
+                              ctx
+                                  .read<TaskBloc>()
+                                  .add(CreateTaskRequested(task));
+                            }
                           },
-                          validator: (v) => v == null ? 'Required' : null,
+                          child: const Text('Create Task'),
                         );
-                      } else if (state is DeveloperListError) {
-                        return Text(
-                          'Error loading developers: ${state.message}',
-                        );
-                      }
-                      return const SizedBox();
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  Builder(
-                    builder: (ctx) {
-                      return ElevatedButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            final task = Task(
-                              id: 0, // Ignored by create
-                              title: _titleController.text,
-                              description: _descController.text,
-                              hourlyRate: double.parse(_rateController.text),
-                              assigneeId: _selectedDeveloper!.id,
-                              projectId: widget.projectId,
-                              status: TaskStatus.todo,
-                            );
-                            ctx.read<TaskBloc>().add(CreateTaskRequested(task));
-                          }
-                        },
-                        child: const Text('Create Task'),
-                      );
-                    },
-                  ),
-                ],
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

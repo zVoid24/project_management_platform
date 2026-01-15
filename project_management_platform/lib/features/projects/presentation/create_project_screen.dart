@@ -33,45 +33,73 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         builder: (context, state) {
           return Scaffold(
             appBar: AppBar(title: const Text('Create Project')),
-            body: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _titleController,
-                      decoration: const InputDecoration(labelText: 'Title'),
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _descController,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
+            body: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Kick off a new project',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
-                      maxLines: 3,
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: state is ProjectLoading
-                          ? null
-                          : () {
-                              if (_formKey.currentState!.validate()) {
-                                context.read<ProjectBloc>().add(
-                                  CreateProjectRequested(
-                                    _titleController.text,
-                                    _descController.text,
-                                  ),
-                                );
-                              }
-                            },
-                      child: state is ProjectLoading
-                          ? const CircularProgressIndicator()
-                          : const Text('Create'),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Provide a clear title and description to align your team.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6),
+                            ),
+                      ),
+                      const SizedBox(height: 24),
+                      TextFormField(
+                        controller: _titleController,
+                        decoration: const InputDecoration(labelText: 'Title'),
+                        validator: (v) => v!.isEmpty ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descController,
+                        decoration: const InputDecoration(
+                          labelText: 'Description',
+                        ),
+                        maxLines: 4,
+                        validator: (v) => v!.isEmpty ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: state is ProjectLoading
+                            ? null
+                            : () {
+                                if (_formKey.currentState!.validate()) {
+                                  context.read<ProjectBloc>().add(
+                                        CreateProjectRequested(
+                                          _titleController.text,
+                                          _descController.text,
+                                        ),
+                                      );
+                                }
+                              },
+                        child: state is ProjectLoading
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Create Project'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

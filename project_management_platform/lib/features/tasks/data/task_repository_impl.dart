@@ -4,7 +4,6 @@ import '../../../../core/errors/failures.dart';
 import '../domain/task.dart';
 import '../domain/task_repository.dart';
 import 'task_remote_data_source.dart';
-import 'task_model.dart';
 
 @LazySingleton(as: TaskRepository)
 class TaskRepositoryImpl implements TaskRepository {
@@ -63,18 +62,14 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
-  Future<Either<Failure, Task>> submitTask(
+  Future<Either<Failure, Unit>> submitTask(
     int taskId,
     double timeSpent,
     String? filePath,
   ) async {
     try {
-      final result = await remoteDataSource.submitTask(
-        taskId,
-        timeSpent,
-        filePath,
-      );
-      return Right(result);
+      await remoteDataSource.submitTask(taskId, timeSpent, filePath);
+      return const Right(unit);
     } on Failure catch (e) {
       return Left(e);
     } catch (_) {

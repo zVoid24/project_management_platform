@@ -12,6 +12,19 @@ class TaskModel extends Task {
     super.timeSpent,
   });
 
+  factory TaskModel.fromTask(Task task) {
+    return TaskModel(
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      hourlyRate: task.hourlyRate,
+      assigneeId: task.assigneeId,
+      projectId: task.projectId,
+      status: task.status,
+      timeSpent: task.timeSpent,
+    );
+  }
+
   factory TaskModel.fromJson(Map<String, dynamic> json) {
     return TaskModel(
       id: json['id'],

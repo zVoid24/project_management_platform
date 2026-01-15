@@ -37,7 +37,7 @@ class ProjectRemoteDataSourceImpl implements ProjectRemoteDataSource {
         data: {'title': title, 'description': description},
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return ProjectModel.fromJson(response.data);
       } else {
         throw const ServerFailure('Failed to create project');
