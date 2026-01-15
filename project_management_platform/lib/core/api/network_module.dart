@@ -16,9 +16,7 @@ abstract class CoreModule {
         baseUrl: resolvedBaseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
-        headers: {
-          'Accept': 'application/json',
-        },
+        headers: {'Accept': 'application/json'},
       ),
     );
 
@@ -50,7 +48,7 @@ String _defaultBaseUrlByPlatform() {
 
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
-      return 'http://10.0.2.2:8000/api/v1';
+      return 'http://192.168.0.107:8000/api/v1';
     case TargetPlatform.iOS:
     case TargetPlatform.macOS:
     case TargetPlatform.linux:
