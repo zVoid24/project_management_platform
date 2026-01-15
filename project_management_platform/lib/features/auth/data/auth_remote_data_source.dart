@@ -6,6 +6,7 @@ import 'user_model.dart';
 
 abstract class AuthRemoteDataSource {
   Future<UserModel> login(String email, String password);
+  Future<void> logout();
 }
 
 @LazySingleton(as: AuthRemoteDataSource)
@@ -45,5 +46,12 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on DioException catch (e) {
       throw ServerFailure(e.response?.data['detail'] ?? 'Server Error');
     }
+  }
+
+  @override
+  Future<void> logout() async {
+    await prefs.remove('access_token');
+    await prefs.remove('user_role');
+    await prefs.remove('user_id');
   }
 }

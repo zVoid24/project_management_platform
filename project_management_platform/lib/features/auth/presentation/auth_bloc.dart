@@ -21,6 +21,8 @@ class LoginRequested extends AuthEvent {
   List<Object> get props => [email, password];
 }
 
+class LogoutRequested extends AuthEvent {}
+
 abstract class AuthState extends Equatable {
   const AuthState();
 
@@ -54,13 +56,24 @@ class AuthError extends AuthState {
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LoginUseCase loginUseCase;
 
-  AuthBloc(this.loginUseCase) : super(AuthInitial()) {
+  final LogoutUseCase logoutUseCase;
+
+  AuthBloc(this.loginUseCase, this.logoutUseCase) : super(AuthInitial()) {
     on<LoginRequested>((event, emit) async {
       emit(AuthLoading());
       final result = await loginUseCase(event.email, event.password);
       result.fold(
         (failure) => emit(AuthError(failure.message)),
         (user) => emit(AuthAuthenticated(user)),
+      );
+    });
+
+    on<LogoutRequested>((event, emit) async {
+      emit(AuthLoading());
+      final result = await logoutUseCase();
+      result.fold(
+        (failure) => emit(AuthError(failure.message)),
+        (_) => emit(AuthInitial()),
       );
     });
   }

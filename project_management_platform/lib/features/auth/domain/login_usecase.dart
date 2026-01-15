@@ -14,3 +14,14 @@ class LoginUseCase {
     return await repository.login(email, password);
   }
 }
+
+@lazySingleton
+class LogoutUseCase {
+  final AuthRepository repository;
+
+  LogoutUseCase(this.repository);
+
+  Future<Either<Failure, Unit>> call() async {
+    return await repository.logout();
+  }
+}

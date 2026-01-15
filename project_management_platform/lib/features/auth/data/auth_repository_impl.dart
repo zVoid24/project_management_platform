@@ -22,4 +22,16 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Left(ServerFailure('Unexpected Error'));
     }
   }
+
+  @override
+  Future<Either<Failure, Unit>> logout() async {
+    try {
+      await remoteDataSource.logout();
+      return const Right(unit);
+    } on Failure catch (e) {
+      return Left(e);
+    } catch (_) {
+      return const Left(ServerFailure('Unexpected Error'));
+    }
+  }
 }

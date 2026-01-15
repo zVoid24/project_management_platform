@@ -43,6 +43,21 @@ class SubmitTaskRequested extends TaskEvent {
   List<Object?> get props => [taskId, timeSpent, filePath];
 }
 
+class PayTaskRequested extends TaskEvent {
+  final int taskId;
+  const PayTaskRequested(this.taskId);
+  @override
+  List<Object> get props => [taskId];
+}
+
+class DownloadSolutionRequested extends TaskEvent {
+  final int taskId;
+  final String savePath;
+  const DownloadSolutionRequested(this.taskId, this.savePath);
+  @override
+  List<Object> get props => [taskId, savePath];
+}
+
 abstract class TaskState extends Equatable {
   const TaskState();
   @override
@@ -72,6 +87,17 @@ class TaskSubmissionSuccess extends TaskState {
   const TaskSubmissionSuccess();
 }
 
+class TaskPaymentSuccess extends TaskState {
+  final double amountPaid;
+  const TaskPaymentSuccess(this.amountPaid);
+  @override
+  List<Object> get props => [amountPaid];
+}
+
+class TaskDownloadSuccess extends TaskState {
+  const TaskDownloadSuccess();
+}
+
 class TaskError extends TaskState {
   final String message;
   const TaskError(this.message);
@@ -85,13 +111,18 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
   final GetTasksByProjectUseCase getTasksByProject;
   final CreateTaskUseCase createTask;
   final SubmitTaskUseCase submitTask;
-  // final UpdateStatus... // assume available or add if needed
+  final UpdateTaskStatusUseCase updateTaskStatus;
+  final PayForTaskUseCase payForTask;
+  final DownloadSolutionUseCase downloadSolution;
 
   TaskBloc(
     this.getAssignedTasks,
     this.getTasksByProject,
     this.createTask,
     this.submitTask,
+    this.updateTaskStatus,
+    this.payForTask,
+    this.downloadSolution,
   ) : super(TaskInitial()) {
     on<LoadAssignedTasks>((event, emit) async {
       emit(TaskLoading());
@@ -120,6 +151,15 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       );
     });
 
+    on<UpdateTaskStatusRequested>((event, emit) async {
+      emit(TaskLoading());
+      final result = await updateTaskStatus(event.taskId, event.status);
+      result.fold(
+        (failure) => emit(TaskError(failure.message)),
+        (task) => emit(TaskOperationSuccess(task)),
+      );
+    });
+
     on<SubmitTaskRequested>((event, emit) async {
       emit(TaskLoading());
       final result = await submitTask(
@@ -130,6 +170,24 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       result.fold(
         (failure) => emit(TaskError(failure.message)),
         (_) => emit(const TaskSubmissionSuccess()),
+      );
+    });
+
+    on<PayTaskRequested>((event, emit) async {
+      emit(TaskLoading());
+      final result = await payForTask(event.taskId);
+      result.fold(
+        (failure) => emit(TaskError(failure.message)),
+        (amount) => emit(TaskPaymentSuccess(amount)),
+      );
+    });
+
+    on<DownloadSolutionRequested>((event, emit) async {
+      emit(TaskLoading());
+      final result = await downloadSolution(event.taskId, event.savePath);
+      result.fold(
+        (failure) => emit(TaskError(failure.message)),
+        (_) => emit(const TaskDownloadSuccess()),
       );
     });
   }

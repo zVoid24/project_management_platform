@@ -25,6 +25,11 @@ import 'features/projects/data/project_repository_impl.dart' as _i490;
 import 'features/projects/domain/project_repository.dart' as _i595;
 import 'features/projects/domain/project_usecases.dart' as _i856;
 import 'features/projects/presentation/project_bloc.dart' as _i958;
+import 'features/stats/data/admin_stats_remote_data_source.dart' as _i517;
+import 'features/stats/data/admin_stats_repository_impl.dart' as _i627;
+import 'features/stats/domain/admin_stats_repository.dart' as _i65;
+import 'features/stats/domain/get_admin_stats_usecase.dart' as _i486;
+import 'features/stats/presentation/admin_stats_bloc.dart' as _i576;
 import 'features/tasks/data/task_remote_data_source.dart' as _i587;
 import 'features/tasks/data/task_repository_impl.dart' as _i384;
 import 'features/tasks/domain/task_repository.dart' as _i651;
@@ -52,8 +57,16 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i587.TaskRemoteDataSource>(
       () => _i587.TaskRemoteDataSourceImpl(gh<_i361.Dio>()),
     );
+    gh.lazySingleton<_i517.AdminStatsRemoteDataSource>(
+      () => _i517.AdminStatsRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
     gh.lazySingleton<_i273.UserRemoteDataSource>(
       () => _i273.UserRemoteDataSourceImpl(gh<_i361.Dio>()),
+    );
+    gh.lazySingleton<_i65.AdminStatsRepository>(
+      () => _i627.AdminStatsRepositoryImpl(
+        gh<_i517.AdminStatsRemoteDataSource>(),
+      ),
     );
     gh.lazySingleton<_i651.TaskRepository>(
       () => _i384.TaskRepositoryImpl(gh<_i587.TaskRemoteDataSource>()),
@@ -70,6 +83,9 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i961.ProjectRemoteDataSource>(
       () => _i961.ProjectRemoteDataSourceImpl(client: gh<_i361.Dio>()),
     );
+    gh.lazySingleton<_i486.GetAdminStatsUseCase>(
+      () => _i486.GetAdminStatsUseCase(gh<_i65.AdminStatsRepository>()),
+    );
     gh.lazySingleton<_i793.GetAssignedTasksUseCase>(
       () => _i793.GetAssignedTasksUseCase(gh<_i651.TaskRepository>()),
     );
@@ -82,13 +98,28 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i793.SubmitTaskUseCase>(
       () => _i793.SubmitTaskUseCase(gh<_i651.TaskRepository>()),
     );
+    gh.lazySingleton<_i793.UpdateTaskStatusUseCase>(
+      () => _i793.UpdateTaskStatusUseCase(gh<_i651.TaskRepository>()),
+    );
+    gh.lazySingleton<_i793.PayForTaskUseCase>(
+      () => _i793.PayForTaskUseCase(gh<_i651.TaskRepository>()),
+    );
+    gh.lazySingleton<_i793.DownloadSolutionUseCase>(
+      () => _i793.DownloadSolutionUseCase(gh<_i651.TaskRepository>()),
+    );
     gh.factory<_i989.TaskBloc>(
       () => _i989.TaskBloc(
         gh<_i793.GetAssignedTasksUseCase>(),
         gh<_i793.GetTasksByProjectUseCase>(),
         gh<_i793.CreateTaskUseCase>(),
         gh<_i793.SubmitTaskUseCase>(),
+        gh<_i793.UpdateTaskStatusUseCase>(),
+        gh<_i793.PayForTaskUseCase>(),
+        gh<_i793.DownloadSolutionUseCase>(),
       ),
+    );
+    gh.factory<_i576.AdminStatsBloc>(
+      () => _i576.AdminStatsBloc(gh<_i486.GetAdminStatsUseCase>()),
     );
     gh.lazySingleton<_i340.GetDevelopersUseCase>(
       () => _i340.GetDevelopersUseCase(gh<_i625.UserRepository>()),
@@ -105,13 +136,21 @@ extension GetItInjectableX on _i174.GetIt {
     gh.lazySingleton<_i42.LoginUseCase>(
       () => _i42.LoginUseCase(gh<_i260.AuthRepository>()),
     );
+    gh.lazySingleton<_i42.LogoutUseCase>(
+      () => _i42.LogoutUseCase(gh<_i260.AuthRepository>()),
+    );
     gh.lazySingleton<_i856.GetProjectsUseCase>(
       () => _i856.GetProjectsUseCase(gh<_i595.ProjectRepository>()),
     );
     gh.lazySingleton<_i856.CreateProjectUseCase>(
       () => _i856.CreateProjectUseCase(gh<_i595.ProjectRepository>()),
     );
-    gh.factory<_i770.AuthBloc>(() => _i770.AuthBloc(gh<_i42.LoginUseCase>()));
+    gh.factory<_i770.AuthBloc>(
+      () => _i770.AuthBloc(
+        gh<_i42.LoginUseCase>(),
+        gh<_i42.LogoutUseCase>(),
+      ),
+    );
     gh.factory<_i958.ProjectBloc>(
       () => _i958.ProjectBloc(
         gh<_i856.GetProjectsUseCase>(),
