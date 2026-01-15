@@ -10,6 +10,8 @@ abstract class TaskRemoteDataSource {
   Future<TaskModel> createTask(Task task);
   Future<TaskModel> updateStatus(int taskId, TaskStatus status);
   Future<void> submitTask(int taskId, double timeSpent, String? filePath);
+  Future<double> payForTask(int taskId);
+  Future<void> downloadSolution(int taskId, String savePath);
 }
 
 @LazySingleton(as: TaskRemoteDataSource)
@@ -105,6 +107,35 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
         return;
       }
       throw const ServerFailure('Failed to submit task');
+    } on DioException catch (e) {
+      throw ServerFailure(e.response?.data['detail'] ?? 'Server Error');
+    }
+  }
+
+  @override
+  Future<double> payForTask(int taskId) async {
+    try {
+      final response = await client.post('/payments/$taskId');
+      if (response.statusCode == 200) {
+        return (response.data['amount_paid'] as num).toDouble();
+      }
+      throw const ServerFailure('Payment failed');
+    } on DioException catch (e) {
+      throw ServerFailure(e.response?.data['detail'] ?? 'Server Error');
+    }
+  }
+
+  @override
+  Future<void> downloadSolution(int taskId, String savePath) async {
+    try {
+      final response = await client.download(
+        '/tasks/$taskId/download',
+        savePath,
+      );
+      if (response.statusCode == 200) {
+        return;
+      }
+      throw const ServerFailure('Failed to download solution');
     } on DioException catch (e) {
       throw ServerFailure(e.response?.data['detail'] ?? 'Server Error');
     }

@@ -68,6 +68,31 @@ async def submit_task(
     await db.commit()
     return {"message": "Task submitted successfully"}
 
+@router.patch("/{task_id}", response_model=schemas.TaskRead)
+async def update_task(
+    task_id: int,
+    payload: schemas.TaskUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(allow_developer)
+):
+    task = await db.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.assignee_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your task")
+
+    if payload.status:
+        if payload.status not in [TaskStatus.TODO, TaskStatus.IN_PROGRESS]:
+            raise HTTPException(status_code=400, detail="Invalid status update")
+        task.status = payload.status
+
+    if payload.time_spent is not None:
+        task.time_spent = payload.time_spent
+
+    await db.commit()
+    await db.refresh(task)
+    return task
+
 @router.get("/{task_id}/download")
 async def download_solution(
     task_id: int,

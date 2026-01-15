@@ -51,12 +51,16 @@ class TaskModel extends Task {
 
   static TaskStatus _mapStringToStatus(String status) {
     switch (status) {
+      case 'todo':
       case 'TODO':
         return TaskStatus.todo;
+      case 'in_progress':
       case 'IN_PROGRESS':
         return TaskStatus.inProgress;
+      case 'submitted':
       case 'SUBMITTED':
         return TaskStatus.submitted;
+      case 'paid':
       case 'PAID':
         return TaskStatus.paid;
       default:
@@ -67,13 +71,13 @@ class TaskModel extends Task {
   static String statusToString(TaskStatus status) {
     switch (status) {
       case TaskStatus.todo:
-        return 'TODO';
+        return 'todo';
       case TaskStatus.inProgress:
-        return 'IN_PROGRESS';
+        return 'in_progress';
       case TaskStatus.submitted:
-        return 'SUBMITTED';
+        return 'submitted';
       case TaskStatus.paid:
-        return 'PAID';
+        return 'paid';
     }
   }
 }

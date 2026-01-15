@@ -12,4 +12,9 @@ abstract class TaskRepository {
     double timeSpent,
     String? filePath,
   );
+  Future<Either<Failure, double>> payForTask(int taskId);
+  Future<Either<Failure, Unit>> downloadSolution(
+    int taskId,
+    String savePath,
+  );
 }

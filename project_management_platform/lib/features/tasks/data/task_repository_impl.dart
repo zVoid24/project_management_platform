@@ -76,4 +76,31 @@ class TaskRepositoryImpl implements TaskRepository {
       return const Left(ServerFailure('Unexpected Error'));
     }
   }
+
+  @override
+  Future<Either<Failure, double>> payForTask(int taskId) async {
+    try {
+      final amount = await remoteDataSource.payForTask(taskId);
+      return Right(amount);
+    } on Failure catch (e) {
+      return Left(e);
+    } catch (_) {
+      return const Left(ServerFailure('Unexpected Error'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> downloadSolution(
+    int taskId,
+    String savePath,
+  ) async {
+    try {
+      await remoteDataSource.downloadSolution(taskId, savePath);
+      return const Right(unit);
+    } on Failure catch (e) {
+      return Left(e);
+    } catch (_) {
+      return const Left(ServerFailure('Unexpected Error'));
+    }
+  }
 }

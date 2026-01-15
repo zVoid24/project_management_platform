@@ -36,3 +36,27 @@ class SubmitTaskUseCase {
     String? filePath,
   ) => repository.submitTask(taskId, timeSpent, filePath);
 }
+
+@lazySingleton
+class UpdateTaskStatusUseCase {
+  final TaskRepository repository;
+  UpdateTaskStatusUseCase(this.repository);
+  Future<Either<Failure, Task>> call(int taskId, TaskStatus status) =>
+      repository.updateStatus(taskId, status);
+}
+
+@lazySingleton
+class PayForTaskUseCase {
+  final TaskRepository repository;
+  PayForTaskUseCase(this.repository);
+  Future<Either<Failure, double>> call(int taskId) =>
+      repository.payForTask(taskId);
+}
+
+@lazySingleton
+class DownloadSolutionUseCase {
+  final TaskRepository repository;
+  DownloadSolutionUseCase(this.repository);
+  Future<Either<Failure, Unit>> call(int taskId, String savePath) =>
+      repository.downloadSolution(taskId, savePath);
+}

@@ -23,7 +23,7 @@ class _CreateProjectScreenState extends State<CreateProjectScreen> {
         listener: (context, state) {
           if (state is ProjectLoaded) {
             // Success - technically LoadProjects is emitted after creation
-            Navigator.of(context).pop();
+            Navigator.of(context).pop(true);
           } else if (state is ProjectError) {
             ScaffoldMessenger.of(
               context,
