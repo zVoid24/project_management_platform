@@ -61,11 +61,15 @@ class TaskLoaded extends TaskState {
 }
 
 class TaskOperationSuccess extends TaskState {
-  // For single operations like create/submit
+  // For create operations
   final Task task;
   const TaskOperationSuccess(this.task);
   @override
   List<Object> get props => [task];
+}
+
+class TaskSubmissionSuccess extends TaskState {
+  const TaskSubmissionSuccess();
 }
 
 class TaskError extends TaskState {
@@ -125,7 +129,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       );
       result.fold(
         (failure) => emit(TaskError(failure.message)),
-        (task) => emit(TaskOperationSuccess(task)),
+        (_) => emit(const TaskSubmissionSuccess()),
       );
     });
   }

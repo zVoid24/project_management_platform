@@ -9,7 +9,7 @@ abstract class TaskRemoteDataSource {
   Future<List<TaskModel>> getTasksByProject(int projectId);
   Future<TaskModel> createTask(Task task);
   Future<TaskModel> updateStatus(int taskId, TaskStatus status);
-  Future<TaskModel> submitTask(int taskId, double timeSpent, String? filePath);
+  Future<void> submitTask(int taskId, double timeSpent, String? filePath);
 }
 
 @LazySingleton(as: TaskRemoteDataSource)
@@ -54,9 +54,9 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   @override
   Future<TaskModel> createTask(Task task) async {
     try {
-      final taskModel = task as TaskModel;
+      final taskModel = TaskModel.fromTask(task);
       final response = await client.post('/tasks/', data: taskModel.toJson());
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         return TaskModel.fromJson(response.data);
       } else {
         throw const ServerFailure('Failed to create task');
@@ -84,27 +84,27 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
   }
 
   @override
-  Future<TaskModel> submitTask(
+  Future<void> submitTask(
     int taskId,
     double timeSpent,
     String? filePath,
   ) async {
     try {
-      final formData = FormData.fromMap({'time_spent': timeSpent});
-      if (filePath != null) {
-        formData.files.add(
-          MapEntry('solution_file', await MultipartFile.fromFile(filePath)),
-        );
+      if (filePath == null || filePath.isEmpty) {
+        throw const ServerFailure('Please attach a solution zip file.');
       }
+      final formData = FormData.fromMap({'hours': timeSpent});
+      formData.files.add(
+        MapEntry('file', await MultipartFile.fromFile(filePath)),
+      );
       final response = await client.post(
         '/tasks/$taskId/submit',
         data: formData,
       );
-      if (response.statusCode == 200) {
-        return TaskModel.fromJson(response.data);
-      } else {
-        throw const ServerFailure('Failed to submit task');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return;
       }
+      throw const ServerFailure('Failed to submit task');
     } on DioException catch (e) {
       throw ServerFailure(e.response?.data['detail'] ?? 'Server Error');
     }

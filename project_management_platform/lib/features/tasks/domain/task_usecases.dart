@@ -30,7 +30,7 @@ class CreateTaskUseCase {
 class SubmitTaskUseCase {
   final TaskRepository repository;
   SubmitTaskUseCase(this.repository);
-  Future<Either<Failure, Task>> call(
+  Future<Either<Failure, Unit>> call(
     int taskId,
     double timeSpent,
     String? filePath,

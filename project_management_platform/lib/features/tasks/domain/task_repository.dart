@@ -7,7 +7,7 @@ abstract class TaskRepository {
   Future<Either<Failure, List<Task>>> getTasksByProject(int projectId);
   Future<Either<Failure, Task>> createTask(Task task);
   Future<Either<Failure, Task>> updateStatus(int taskId, TaskStatus status);
-  Future<Either<Failure, Task>> submitTask(
+  Future<Either<Failure, Unit>> submitTask(
     int taskId,
     double timeSpent,
     String? filePath,
