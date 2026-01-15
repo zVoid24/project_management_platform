@@ -1,0 +1,132 @@
+import 'package:equatable/equatable.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:injectable/injectable.dart';
+import '../domain/task.dart';
+import '../domain/task_usecases.dart';
+
+abstract class TaskEvent extends Equatable {
+  const TaskEvent();
+  @override
+  List<Object?> get props => [];
+}
+
+class LoadAssignedTasks extends TaskEvent {}
+
+class LoadProjectTasks extends TaskEvent {
+  final int projectId;
+  const LoadProjectTasks(this.projectId);
+  @override
+  List<Object> get props => [projectId];
+}
+
+class CreateTaskRequested extends TaskEvent {
+  final Task task;
+  const CreateTaskRequested(this.task);
+  @override
+  List<Object> get props => [task];
+}
+
+class UpdateTaskStatusRequested extends TaskEvent {
+  final int taskId;
+  final TaskStatus status;
+  const UpdateTaskStatusRequested(this.taskId, this.status);
+  @override
+  List<Object> get props => [taskId, status];
+}
+
+class SubmitTaskRequested extends TaskEvent {
+  final int taskId;
+  final double timeSpent;
+  final String? filePath;
+  const SubmitTaskRequested(this.taskId, this.timeSpent, this.filePath);
+  @override
+  List<Object?> get props => [taskId, timeSpent, filePath];
+}
+
+abstract class TaskState extends Equatable {
+  const TaskState();
+  @override
+  List<Object> get props => [];
+}
+
+class TaskInitial extends TaskState {}
+
+class TaskLoading extends TaskState {}
+
+class TaskLoaded extends TaskState {
+  final List<Task> tasks;
+  const TaskLoaded(this.tasks);
+  @override
+  List<Object> get props => [tasks];
+}
+
+class TaskOperationSuccess extends TaskState {
+  // For single operations like create/submit
+  final Task task;
+  const TaskOperationSuccess(this.task);
+  @override
+  List<Object> get props => [task];
+}
+
+class TaskError extends TaskState {
+  final String message;
+  const TaskError(this.message);
+  @override
+  List<Object> get props => [message];
+}
+
+@injectable
+class TaskBloc extends Bloc<TaskEvent, TaskState> {
+  final GetAssignedTasksUseCase getAssignedTasks;
+  final GetTasksByProjectUseCase getTasksByProject;
+  final CreateTaskUseCase createTask;
+  final SubmitTaskUseCase submitTask;
+  // final UpdateStatus... // assume available or add if needed
+
+  TaskBloc(
+    this.getAssignedTasks,
+    this.getTasksByProject,
+    this.createTask,
+    this.submitTask,
+  ) : super(TaskInitial()) {
+    on<LoadAssignedTasks>((event, emit) async {
+      emit(TaskLoading());
+      final result = await getAssignedTasks();
+      result.fold(
+        (failure) => emit(TaskError(failure.message)),
+        (tasks) => emit(TaskLoaded(tasks)),
+      );
+    });
+
+    on<LoadProjectTasks>((event, emit) async {
+      emit(TaskLoading());
+      final result = await getTasksByProject(event.projectId);
+      result.fold(
+        (failure) => emit(TaskError(failure.message)),
+        (tasks) => emit(TaskLoaded(tasks)),
+      );
+    });
+
+    on<CreateTaskRequested>((event, emit) async {
+      emit(TaskLoading());
+      final result = await createTask(event.task);
+      result.fold(
+        (failure) => emit(TaskError(failure.message)),
+        (task) => emit(TaskOperationSuccess(task)),
+      );
+    });
+
+    on<SubmitTaskRequested>((event, emit) async {
+      emit(TaskLoading());
+      final result = await submitTask(
+        event.taskId,
+        event.timeSpent,
+        event.filePath,
+      );
+      result.fold(
+        (failure) => emit(TaskError(failure.message)),
+        (task) => emit(TaskOperationSuccess(task)),
+      );
+    });
+  }
+}
