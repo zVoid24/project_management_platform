@@ -22,6 +22,10 @@ class Project(Base):
     owner = relationship("User", back_populates="projects")
     tasks = relationship("Task", back_populates="project", cascade="all, delete-orphan")
 
+    @property
+    def task_count(self):
+        return len(self.tasks)
+
 class Task(Base):
     __tablename__ = "tasks"
 

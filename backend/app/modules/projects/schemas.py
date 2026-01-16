@@ -13,6 +13,7 @@ class ProjectRead(ProjectBase):
     id: int
     owner_id: int
     created_at: datetime
+    task_count: int = 0
 
     class Config:
         from_attributes = True

@@ -23,6 +23,18 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
+  Future<Either<Failure, List<Task>>> getAllTasks() async {
+    try {
+      final tasks = await remoteDataSource.getAllTasks();
+      return Right(tasks);
+    } on Failure catch (e) {
+      return Left(e);
+    } catch (_) {
+      return const Left(ServerFailure('Unexpected Error'));
+    }
+  }
+
+  @override
   Future<Either<Failure, List<Task>>> getTasksByProject(int projectId) async {
     try {
       final tasks = await remoteDataSource.getTasksByProject(projectId);

@@ -6,6 +6,7 @@ class ProjectModel extends Project {
     required super.title,
     required super.description,
     required super.ownerId,
+    required super.taskCount,
   });
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
@@ -14,6 +15,7 @@ class ProjectModel extends Project {
       title: json['title'],
       description: json['description'],
       ownerId: json['owner_id'],
+      taskCount: json['task_count'] ?? 0,
     );
   }
 }

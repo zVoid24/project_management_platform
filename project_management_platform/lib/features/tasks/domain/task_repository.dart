@@ -4,6 +4,7 @@ import 'task.dart';
 
 abstract class TaskRepository {
   Future<Either<Failure, List<Task>>> getAssignedTasks();
+  Future<Either<Failure, List<Task>>> getAllTasks(); // Admin only
   Future<Either<Failure, List<Task>>> getTasksByProject(int projectId);
   Future<Either<Failure, Task>> createTask(Task task);
   Future<Either<Failure, Task>> updateStatus(int taskId, TaskStatus status);
@@ -13,8 +14,5 @@ abstract class TaskRepository {
     String? filePath,
   );
   Future<Either<Failure, double>> payForTask(int taskId);
-  Future<Either<Failure, Unit>> downloadSolution(
-    int taskId,
-    String savePath,
-  );
+  Future<Either<Failure, Unit>> downloadSolution(int taskId, String savePath);
 }

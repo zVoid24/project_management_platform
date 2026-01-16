@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'features/auth/presentation/auth_bloc.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'features/dashboard/presentation/admin_dashboard.dart';
 import 'features/dashboard/presentation/buyer_dashboard.dart';
 import 'features/dashboard/presentation/developer_dashboard.dart';
+import 'core/theme/app_theme.dart';
 import 'injection_container.dart';
 
 void main() async {
@@ -43,48 +44,7 @@ class MyApp extends StatelessWidget {
       providers: [BlocProvider(create: (context) => sl<AuthBloc>())],
       child: MaterialApp.router(
         title: 'Project Management Platform',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF4B5EFF),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          textTheme: GoogleFonts.interTextTheme(),
-          scaffoldBackgroundColor: const Color(0xFFF6F7FB),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            centerTitle: false,
-          ),
-          cardTheme: CardThemeData(
-            color: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
-          ),
-          filledButtonTheme: FilledButtonThemeData(
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-        ),
+        theme: AppTheme.lightTheme,
         routerConfig: _router,
       ),
     );

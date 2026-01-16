@@ -6,8 +6,10 @@ import 'task_model.dart';
 
 abstract class TaskRemoteDataSource {
   Future<List<TaskModel>> getAssignedTasks();
+  Future<List<TaskModel>> getAllTasks();
   Future<List<TaskModel>> getTasksByProject(int projectId);
   Future<TaskModel> createTask(Task task);
+
   Future<TaskModel> updateStatus(int taskId, TaskStatus status);
   Future<void> submitTask(int taskId, double timeSpent, String? filePath);
   Future<double> payForTask(int taskId);
@@ -29,6 +31,22 @@ class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
             .toList();
       } else {
         throw const ServerFailure('Failed to fetch tasks');
+      }
+    } on DioException catch (e) {
+      throw ServerFailure(e.response?.data['detail'] ?? 'Server Error');
+    }
+  }
+
+  @override
+  Future<List<TaskModel>> getAllTasks() async {
+    try {
+      final response = await client.get('/tasks/all');
+      if (response.statusCode == 200) {
+        return (response.data as List)
+            .map((e) => TaskModel.fromJson(e))
+            .toList();
+      } else {
+        throw const ServerFailure('Failed to fetch all tasks');
       }
     } on DioException catch (e) {
       throw ServerFailure(e.response?.data['detail'] ?? 'Server Error');

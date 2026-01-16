@@ -1,20 +1,20 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../domain/task.dart';
 import 'task_bloc.dart';
 import '../../../injection_container.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/custom_widgets.dart';
 
 enum TaskDetailsMode { buyer, developer }
 
 class TaskDetailsScreen extends StatefulWidget {
   final Task task;
   final TaskDetailsMode mode;
-  const TaskDetailsScreen({
-    super.key,
-    required this.task,
-    required this.mode,
-  });
+  const TaskDetailsScreen({super.key, required this.task, required this.mode});
 
   @override
   State<TaskDetailsScreen> createState() => _TaskDetailsScreenState();
@@ -25,6 +25,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   final _hoursController = TextEditingController();
   String? _selectedFilePath;
   bool _shouldRefresh = false;
+  String? _cachedDownloadPath;
 
   @override
   void initState() {
@@ -52,25 +53,27 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   Future<void> _downloadSolution(BuildContext context) async {
-    final savePath = await FilePicker.platform.saveFile(
-      dialogTitle: 'Save solution zip',
-      fileName: 'task_${_task.id}_solution.zip',
-      type: FileType.custom,
-      allowedExtensions: ['zip'],
-    );
-    if (savePath == null) {
-      return;
+    // Avoid FilePicker.saveFile on mobile crash.
+    // Use path_provider to get a safe directory.
+    final directory = await getApplicationDocumentsDirectory();
+    final savePath = '${directory.path}/task_${_task.id}_solution.zip';
+    _cachedDownloadPath = savePath;
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Downloading to $savePath...')));
+      context.read<TaskBloc>().add(
+        DownloadSolutionRequested(_task.id, savePath),
+      );
     }
-    context
-        .read<TaskBloc>()
-        .add(DownloadSolutionRequested(_task.id, savePath));
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isBuyer = widget.mode == TaskDetailsMode.buyer;
     final amountDue = (_task.timeSpent ?? 0) * _task.hourlyRate;
+
     return BlocProvider(
       create: (context) => sl<TaskBloc>(),
       child: BlocConsumer<TaskBloc, TaskState>(
@@ -83,6 +86,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             );
           } else if (state is TaskSubmissionSuccess) {
             _shouldRefresh = true;
+            setState(
+              () => _task = _task.copyWith(status: TaskStatus.submitted),
+            );
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Submission received.')),
             );
@@ -97,12 +103,17 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             );
           } else if (state is TaskDownloadSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Solution downloaded.')),
+              const SnackBar(
+                content: Text('Download complete. Opening file...'),
+              ),
             );
+            if (_cachedDownloadPath != null) {
+              OpenFile.open(_cachedDownloadPath);
+            }
           } else if (state is TaskError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
         builder: (context, state) {
@@ -113,82 +124,77 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               return false;
             },
             child: Scaffold(
-              appBar: AppBar(
-                title: const Text('Task Details'),
-              ),
+              appBar: AppBar(title: const Text('Task Details')),
               body: SafeArea(
                 child: Stack(
                   children: [
-                    ListView(
+                    SingleChildScrollView(
                       padding: const EdgeInsets.all(20),
-                      children: [
-                        Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          PremiumCard(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  _task.title,
-                                  style: theme.textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  _task.description,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurface
-                                        .withOpacity(0.6),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                Wrap(
-                                  spacing: 12,
-                                  runSpacing: 8,
+                                Row(
                                   children: [
-                                    _InfoChip(
-                                      icon: Icons.timer_outlined,
-                                      label:
-                                          '\$${_task.hourlyRate.toStringAsFixed(0)}/hr',
+                                    Expanded(
+                                      child: Text(
+                                        _task.title,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleLarge,
+                                      ),
                                     ),
-                                    _InfoChip(
-                                      icon: Icons.person_outline,
-                                      label: 'Developer ${_task.assigneeId}',
-                                    ),
-                                    _InfoChip(
-                                      icon: Icons.track_changes_outlined,
-                                      label: _task.status.label,
-                                    ),
+                                    StatusChip.forStatus(_task.status),
                                   ],
                                 ),
-                                if (_task.timeSpent != null) ...[
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Time logged: ${_task.timeSpent!.toStringAsFixed(1)} hours',
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurface
-                                          .withOpacity(0.7),
+                                const SizedBox(height: 12),
+                                Text(
+                                  _task.description,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.copyWith(height: 1.5),
+                                ),
+                                const SizedBox(height: 20),
+                                const Divider(height: 1),
+                                const SizedBox(height: 20),
+                                Wrap(
+                                  spacing: 16,
+                                  runSpacing: 12,
+                                  children: [
+                                    _DetailItem(
+                                      icon: Icons.attach_money,
+                                      label:
+                                          '${_task.hourlyRate.toStringAsFixed(0)}/hr',
                                     ),
-                                  ),
-                                ],
+                                    _DetailItem(
+                                      icon: Icons.person_outline,
+                                      label: 'Dev ${_task.assigneeId}',
+                                    ),
+                                    if (_task.timeSpent != null)
+                                      _DetailItem(
+                                        icon: Icons.timer,
+                                        label:
+                                            '${_task.timeSpent!.toStringAsFixed(1)} hrs',
+                                      ),
+                                  ],
+                                ),
                               ],
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        if (isBuyer)
-                          ..._buildBuyerActions(context, theme, amountDue),
-                        if (!isBuyer)
-                          ..._buildDeveloperActions(context, theme),
-                      ],
+                          const SizedBox(height: 20),
+                          if (isBuyer)
+                            ..._buildBuyerActions(context, amountDue),
+                          if (!isBuyer) ..._buildDeveloperActions(context),
+                        ],
+                      ),
                     ),
                     if (isLoading)
                       Container(
-                        color: Colors.black.withOpacity(0.05),
-                        child: const Center(
-                          child: CircularProgressIndicator(),
-                        ),
+                        color: Colors.black.withOpacity(0.1),
+                        child: const Center(child: CircularProgressIndicator()),
                       ),
                   ],
                 ),
@@ -200,222 +206,260 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  List<Widget> _buildBuyerActions(
-    BuildContext context,
-    ThemeData theme,
-    double amountDue,
-  ) {
+  List<Widget> _buildBuyerActions(BuildContext context, double amountDue) {
     return [
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      PremiumCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Action Required',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            if (_task.status == TaskStatus.submitted) ...[
               Text(
-                'Submission access',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+                'Review the work and pay to unlock the solution.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceGrey,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Total Amount',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      '\$${amountDue.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: AppTheme.darkNavy,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                _task.status == TaskStatus.submitted
-                    ? 'Payment is required to unlock the solution.'
-                    : _task.status == TaskStatus.paid
-                        ? 'Solution unlocked. You can download the zip.'
-                        : 'Waiting on developer submission.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-              if (_task.status == TaskStatus.submitted) ...[
-                const SizedBox(height: 16),
-                Text(
-                  'Amount due: \$${amountDue.toStringAsFixed(2)}',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
                   onPressed: () =>
                       context.read<TaskBloc>().add(PayTaskRequested(_task.id)),
-                  child: const Text('Pay now'),
+                  icon: const Icon(Icons.lock_open),
+                  label: const Text('Pay to Unlock'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.successGreen,
+                  ),
                 ),
-              ],
-              if (_task.status == TaskStatus.paid) ...[
-                const SizedBox(height: 16),
-                FilledButton.icon(
+              ),
+            ] else if (_task.status == TaskStatus.paid) ...[
+              Text(
+                'Payment complete. You can now download the deliverables.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
                   onPressed: () => _downloadSolution(context),
-                  icon: const Icon(Icons.download),
-                  label: const Text('Download solution zip'),
+                  icon: const Icon(Icons.download_rounded),
+                  label: const Text('Download ZIP'),
                 ),
-              ],
+              ),
+            ] else ...[
+              Text(
+                'Waiting for developer to submit work.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: AppTheme.textGrey),
+              ),
             ],
-          ),
+          ],
         ),
       ),
     ];
   }
 
-  List<Widget> _buildDeveloperActions(BuildContext context, ThemeData theme) {
-    final submissionLocked = _task.status == TaskStatus.submitted ||
-        _task.status == TaskStatus.paid;
+  List<Widget> _buildDeveloperActions(BuildContext context) {
+    final submissionLocked =
+        _task.status == TaskStatus.submitted || _task.status == TaskStatus.paid;
+
     return [
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Update task',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (_task.status == TaskStatus.todo)
-                FilledButton(
+      PremiumCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Update Status',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            if (_task.status == TaskStatus.todo)
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
                   onPressed: () {
                     context.read<TaskBloc>().add(
-                          UpdateTaskStatusRequested(
-                            _task.id,
-                            TaskStatus.inProgress,
-                          ),
-                        );
+                      UpdateTaskStatusRequested(
+                        _task.id,
+                        TaskStatus.inProgress,
+                      ),
+                    );
                   },
-                  child: const Text('Start task'),
+                  child: const Text('Start Working'),
                 ),
-              if (_task.status == TaskStatus.inProgress)
-                OutlinedButton(
+              )
+            else if (_task.status == TaskStatus.inProgress)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
                   onPressed: () {
                     context.read<TaskBloc>().add(
-                          UpdateTaskStatusRequested(
-                            _task.id,
-                            TaskStatus.todo,
-                          ),
-                        );
+                      UpdateTaskStatusRequested(_task.id, TaskStatus.todo),
+                    );
                   },
-                  child: const Text('Move back to todo'),
+                  child: const Text('Mark as Todo'),
                 ),
-            ],
-          ),
+              )
+            else
+              const Text('Task is submitted/completed.'),
+          ],
         ),
       ),
-      const SizedBox(height: 16),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Submit solution',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+      const SizedBox(height: 20),
+      PremiumCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Submission', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            if (submissionLocked)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.successGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ),
-              if (submissionLocked) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Submission already sent.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      color: AppTheme.successGreen,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Submission Received',
+                      style: TextStyle(
+                        color: AppTheme.successGreen,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-              const SizedBox(height: 16),
+              )
+            else ...[
               TextField(
                 controller: _hoursController,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
                 decoration: const InputDecoration(
-                  labelText: 'Hours spent',
+                  labelText: 'Hours Worked',
+                  prefixIcon: Icon(Icons.access_time),
                 ),
-                enabled: !submissionLocked,
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _selectedFilePath == null
-                          ? 'No zip file selected'
-                          : _selectedFilePath!.split('/').last,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
-                      ),
+              InkWell(
+                onTap: _pickZipFile,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: AppTheme.darkNavy.withOpacity(0.1),
                     ),
+                    borderRadius: BorderRadius.circular(12),
+                    color: AppTheme.surfaceGrey,
                   ),
-                  TextButton(
-                    onPressed: submissionLocked ? null : _pickZipFile,
-                    child: const Text('Attach zip'),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.folder_zip, color: AppTheme.primaryBlue),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _selectedFilePath == null
+                              ? 'Tap to select ZIP file'
+                              : _selectedFilePath!.split('/').last,
+                          style: TextStyle(
+                            color: _selectedFilePath == null
+                                ? AppTheme.textGrey
+                                : AppTheme.darkNavy,
+                          ),
+                        ),
+                      ),
+                      if (_selectedFilePath != null)
+                        const Icon(Icons.check, color: AppTheme.successGreen),
+                    ],
                   ),
-                ],
+                ),
               ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: submissionLocked
-                    ? null
-                    : () {
-                        final hours = double.tryParse(_hoursController.text);
-                        if (hours == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Enter valid hours.'),
-                            ),
-                          );
-                          return;
-                        }
-                        context.read<TaskBloc>().add(
-                              SubmitTaskRequested(
-                                _task.id,
-                                hours,
-                                _selectedFilePath,
-                              ),
-                            );
-                      },
-                child: const Text('Submit work'),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () {
+                    final hours = double.tryParse(_hoursController.text);
+                    if (hours == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please enter valid hours.'),
+                        ),
+                      );
+                      return;
+                    }
+                    context.read<TaskBloc>().add(
+                      SubmitTaskRequested(_task.id, hours, _selectedFilePath),
+                    );
+                  },
+                  child: const Text('Submit Solution'),
+                ),
               ),
             ],
-          ),
+          ],
         ),
       ),
     ];
   }
 }
 
-class _InfoChip extends StatelessWidget {
+class _DetailItem extends StatelessWidget {
   final IconData icon;
   final String label;
-  const _InfoChip({required this.icon, required this.label});
+  const _DetailItem({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: theme.colorScheme.primary),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.w600,
-            ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 18, color: AppTheme.textGrey),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            color: AppTheme.darkNavy,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

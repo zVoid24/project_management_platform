@@ -24,10 +24,44 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, User>> register(
+    String email,
+    String password,
+    String role,
+    String? fullName,
+  ) async {
+    try {
+      final user = await remoteDataSource.register(
+        email,
+        password,
+        role,
+        fullName,
+      );
+      return Right(user);
+    } on Failure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return const Left(ServerFailure('Unexpected Error'));
+    }
+  }
+
+  @override
   Future<Either<Failure, Unit>> logout() async {
     try {
       await remoteDataSource.logout();
       return const Right(unit);
+    } on Failure catch (e) {
+      return Left(e);
+    } catch (_) {
+      return const Left(ServerFailure('Unexpected Error'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<User>>> getAllUsers() async {
+    try {
+      final users = await remoteDataSource.getAllUsers();
+      return Right(users);
     } on Failure catch (e) {
       return Left(e);
     } catch (_) {

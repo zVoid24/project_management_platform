@@ -48,7 +48,7 @@ String _defaultBaseUrlByPlatform() {
 
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
-      return 'http://192.168.0.107:8000/api/v1';
+      return 'http://192.168.0.108:8000/api/v1';
     case TargetPlatform.iOS:
     case TargetPlatform.macOS:
     case TargetPlatform.linux:

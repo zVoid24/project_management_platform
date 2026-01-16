@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:injectable/injectable.dart';
 import '../../auth/domain/user.dart';
-import '../domain/get_developers_usecase.dart';
+import '../../auth/domain/get_all_users_usecase.dart';
 
 abstract class DeveloperListEvent extends Equatable {
   const DeveloperListEvent();
@@ -38,12 +38,12 @@ class DeveloperListError extends DeveloperListState {
 
 @injectable
 class DeveloperListBloc extends Bloc<DeveloperListEvent, DeveloperListState> {
-  final GetDevelopersUseCase getDevelopers;
+  final GetAllUsersUseCase getAllUsers;
 
-  DeveloperListBloc(this.getDevelopers) : super(DeveloperListInitial()) {
+  DeveloperListBloc(this.getAllUsers) : super(DeveloperListInitial()) {
     on<LoadDevelopers>((event, emit) async {
       emit(DeveloperListLoading());
-      final result = await getDevelopers();
+      final result = await getAllUsers();
       result.fold(
         (failure) => emit(DeveloperListError(failure.message)),
         (developers) => emit(DeveloperListLoaded(developers)),

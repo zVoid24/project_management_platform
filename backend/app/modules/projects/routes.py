@@ -2,6 +2,8 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.attributes import set_committed_value
 from app.core.database import get_db
 from app.modules.users.models import User
 from app.modules.auth.roles import allow_buyer
@@ -21,6 +23,8 @@ async def create_project(
     db.add(db_project)
     await db.commit()
     await db.refresh(db_project)
+    # Manually set tasks to empty list to avoid MissingGreenlet on property access
+    set_committed_value(db_project, "tasks", [])
     return db_project
 
 @router.get("/", response_model=List[schemas.ProjectRead])
@@ -30,7 +34,11 @@ async def list_projects(
     # Logic might differ for Admin/Developer. 
     # For now, let's assume this endpoint is for buyers to see their projects.
 ):
-    result = await db.execute(select(models.Project).where(models.Project.owner_id == current_user.id))
+    result = await db.execute(
+        select(models.Project)
+        .options(selectinload(models.Project.tasks))
+        .where(models.Project.owner_id == current_user.id)
+    )
     return result.scalars().all()
 
 @router.get("/{project_id}/tasks", response_model=List[TaskRead])

@@ -41,6 +41,29 @@ async def get_my_tasks(
     result = await db.execute(select(Task).where(Task.assignee_id == current_user.id))
     return result.scalars().all()
 
+@router.get("/all", response_model=List[schemas.TaskRead])
+async def get_all_tasks(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(allow_buyer_or_admin) # Allow buyer to see all? Or just admin? Req says Admin. 
+):
+    # Requirement: Admin can see Tasks by status with hourly rate.
+    # Currently allow_buyer_or_admin might be too broad if buyers shouldn't see other projects.
+    # Let's use allow_admin if possible.
+    if current_user.role != "admin": # Strict check if allow_buyer_or_admin is mixed
+         # Actually allow_buyer_or_admin is fine if we filter? 
+         # Buyers usually only see their project tasks.
+         # Let's stick to explicit Admin check or import allow_admin
+         pass
+    
+    # Re-checking imports, I see allow_buyer, allow_developer, allow_buyer_or_admin imported.
+    # I should import allow_admin.
+    from app.modules.auth.roles import allow_admin
+    if current_user.role != "admin":
+         raise HTTPException(status_code=403, detail="Admin only")
+         
+    result = await db.execute(select(Task))
+    return result.scalars().all()
+
 @router.post("/{task_id}/submit")
 async def submit_task(
     task_id: int,

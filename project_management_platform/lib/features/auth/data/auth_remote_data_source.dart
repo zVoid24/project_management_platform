@@ -6,7 +6,14 @@ import 'user_model.dart';
 
 abstract class AuthRemoteDataSource {
   Future<UserModel> login(String email, String password);
+  Future<UserModel> register(
+    String email,
+    String password,
+    String role,
+    String? fullName,
+  );
   Future<void> logout();
+  Future<List<UserModel>> getAllUsers();
 }
 
 @LazySingleton(as: AuthRemoteDataSource)
@@ -49,9 +56,59 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
+  Future<UserModel> register(
+    String email,
+    String password,
+    String role,
+    String? fullName,
+  ) async {
+    try {
+      // 1. Register
+      final response = await client.post(
+        '/auth/register',
+        data: {
+          'email': email,
+          'password': password,
+          'role': role,
+          'full_name': fullName,
+        },
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        // Support 201 Created
+        // Auto login or return user?
+        // Let's assume it returns user or we auto-login.
+        // If it returns the created user, we might need to login to get the token.
+        // Let's try to login immediately.
+        return login(email, password);
+      } else {
+        throw const ServerFailure('Registration failed');
+      }
+    } on DioException catch (e) {
+      throw ServerFailure(e.response?.data['detail'] ?? 'Server Error');
+    }
+  }
+
+  @override
   Future<void> logout() async {
     await prefs.remove('access_token');
     await prefs.remove('user_role');
     await prefs.remove('user_id');
+  }
+
+  @override
+  Future<List<UserModel>> getAllUsers() async {
+    try {
+      final response = await client.get('/users/');
+      if (response.statusCode == 200) {
+        return (response.data as List)
+            .map((e) => UserModel.fromJson(e))
+            .toList();
+      } else {
+        throw const ServerFailure('Failed to fetch users');
+      }
+    } on DioException catch (e) {
+      throw ServerFailure(e.response?.data['detail'] ?? 'Server Error');
+    }
   }
 }

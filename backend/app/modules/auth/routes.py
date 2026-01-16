@@ -4,7 +4,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import verify_password, create_access_token
-from app.modules.users.crud import get_user_by_email
+from app.modules.users.crud import get_user_by_email, create_user
+from app.modules.users.schemas import UserCreate
 from app.modules.auth import schemas
 from app.modules.auth.schemas import Token, UserLogin
 
@@ -37,5 +38,26 @@ async def login_json(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    access_token = create_access_token(subject=user.email)
+    # Line 41 duplicate removed
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/register", response_model=Token)
+async def register(
+    user_data: UserCreate,
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    # Check if exists
+    existing_user = await get_user_by_email(db, user_data.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    
+    # Create user
+    user = await create_user(db, user_data)
+    
+    # Login immediately (return token)
     access_token = create_access_token(subject=user.email)
     return {"access_token": access_token, "token_type": "bearer"}

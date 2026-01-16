@@ -10,11 +10,21 @@ async def get_user_by_email(db: AsyncSession, email: str):
 
 async def create_user(db: AsyncSession, user: UserCreate):
     hashed_password = get_password_hash(user.password)
-    db_user = User(email=user.email, hashed_password=hashed_password, role=user.role)
+    db_user = User(
+        email=user.email, 
+        hashed_password=hashed_password, 
+        role=user.role,
+        full_name=user.full_name
+    )
     db.add(db_user)
     await db.commit()
     await db.refresh(db_user)
+    return db_user
 
 async def get_users_by_role(db: AsyncSession, role: str):
     result = await db.execute(select(User).where(User.role == role))
+    return result.scalars().all()
+
+async def get_all_users(db: AsyncSession):
+    result = await db.execute(select(User))
     return result.scalars().all()

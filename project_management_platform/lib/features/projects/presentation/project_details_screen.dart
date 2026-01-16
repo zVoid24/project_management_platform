@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../tasks/presentation/task_bloc.dart';
-import '../../tasks/presentation/create_task_screen.dart';
+import '../../tasks/presentation/create_task_modal.dart';
 import '../../tasks/presentation/task_details_screen.dart';
-import '../../tasks/domain/task.dart';
 import '../../projects/domain/project.dart';
-import '../../../injection_container.dart';
+import '../../tasks/domain/task.dart';
 import '../../auth/presentation/auth_bloc.dart';
+// import '../../../core/widgets/user_profile_header.dart'; // Removed
+import '../../../core/widgets/custom_widgets.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../injection_container.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/widgets/user_profile_header.dart';
 
 class ProjectDetailsScreen extends StatelessWidget {
   final Project project;
@@ -16,7 +18,6 @@ class ProjectDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return BlocProvider(
       create: (context) => sl<TaskBloc>()..add(LoadProjectTasks(project.id)),
       child: BlocListener<AuthBloc, AuthState>(
@@ -25,227 +26,202 @@ class ProjectDetailsScreen extends StatelessWidget {
             context.go('/');
           }
         },
-        child: Scaffold(
-          appBar: AppBar(title: const Text('Project Detail')),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () async {
-              final result = await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => CreateTaskScreen(projectId: project.id),
-                ),
-              );
-              if (result == true && context.mounted) {
-                context.read<TaskBloc>().add(LoadProjectTasks(project.id));
-              }
-            },
-            child: const Icon(Icons.add_task),
-          ),
-          body: BlocConsumer<TaskBloc, TaskState>(
-            listener: (context, state) {
-              if (state is TaskError) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(state.message)));
-              }
-            },
-            builder: (context, state) {
-              if (state is TaskLoading) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (state is TaskLoaded) {
-                final itemCount =
-                    state.tasks.isEmpty ? 3 : state.tasks.length + 2;
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                  itemCount: itemCount,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return UserProfileHeader(
-                        onLogout: () {
-                          context.read<AuthBloc>().add(LogoutRequested());
-                        },
-                      );
-                    }
-                    if (index == 1) {
-                      return Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                project.title,
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                project.description,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Text(
-                                    'Assigned to',
-                                    style:
-                                        theme.textTheme.labelMedium?.copyWith(
-                                      color: theme.colorScheme.onSurface
-                                          .withOpacity(0.6),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  CircleAvatar(
-                                    radius: 14,
-                                    backgroundColor: theme
-                                        .colorScheme.primary
-                                        .withOpacity(0.12),
-                                    child: Text(
-                                      project.title.isNotEmpty
-                                          ? project.title[0].toUpperCase()
-                                          : '?',
-                                      style: theme.textTheme.labelMedium
-                                          ?.copyWith(
-                                        color: theme.colorScheme.primary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                    if (state.tasks.isEmpty) {
-                      return const Center(
-                        child: Text('No tasks in this project'),
-                      );
-                    }
-                    final task = state.tasks[index - 2];
-                    return InkWell(
-                      onTap: () async {
-                        final refreshed = await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => TaskDetailsScreen(
-                              task: task,
-                              mode: TaskDetailsMode.buyer,
+        child: Builder(
+          builder: (context) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Project Details')),
+              floatingActionButton: FloatingActionButton(
+                backgroundColor: AppTheme.primaryBlue,
+                foregroundColor: Colors.white,
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(24),
+                      ),
+                    ),
+                    builder: (modalContext) => CreateTaskModal(
+                      onCreate: (title, description, assigneeId, hourlyRate) {
+                        context.read<TaskBloc>().add(
+                          CreateTaskRequested(
+                            Task(
+                              id: 0,
+                              title: title,
+                              description: description,
+                              hourlyRate: hourlyRate,
+                              assigneeId: assigneeId,
+                              projectId: project.id,
+                              status: TaskStatus.todo,
                             ),
                           ),
                         );
-                        if (refreshed == true && context.mounted) {
-                          context
-                              .read<TaskBloc>()
-                              .add(LoadProjectTasks(project.id));
-                        }
                       },
-                      borderRadius: BorderRadius.circular(20),
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 36,
-                                    height: 36,
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.primary
-                                          .withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(
-                                      Icons.check_circle_outline,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      task.title,
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.surfaceVariant,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      task.status.label,
-                                      style:
-                                          theme.textTheme.labelSmall?.copyWith(
-                                        color: theme.colorScheme.onSurface
-                                            .withOpacity(0.7),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                task.description,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.6),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.person_outline,
-                                    size: 16,
-                                    color: theme.colorScheme.onSurface
-                                        .withOpacity(0.5),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Dev ${task.assigneeId}',
-                                    style: theme.textTheme.labelMedium
-                                        ?.copyWith(
-                                      color: theme.colorScheme.onSurface
-                                          .withOpacity(0.6),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    '\$${task.hourlyRate.toStringAsFixed(0)}/hr',
-                                    style:
-                                        theme.textTheme.labelMedium?.copyWith(
-                                      color: theme.colorScheme.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
+                    ),
+                  );
+                },
+                child: const Icon(Icons.add_task),
+              ),
+              body: BlocConsumer<TaskBloc, TaskState>(
+                listener: (context, state) {
+                  if (state is TaskError) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(state.message)));
+                  } else if (state is TaskOperationSuccess) {
+                    context.read<TaskBloc>().add(LoadProjectTasks(project.id));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Task created successfully!'),
                       ),
                     );
-                  },
-                );
-              }
-              return const Center(child: Text('No tasks'));
-            },
-          ),
+                  }
+                },
+                builder: (context, state) {
+                  if (state is TaskLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (state is TaskLoaded) {
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        context.read<TaskBloc>().add(
+                          LoadProjectTasks(project.id),
+                        );
+                      },
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 80),
+                        itemCount: state.tasks.isEmpty
+                            ? 1
+                            : state.tasks.length + 1,
+                        separatorBuilder: (_, __) => const SizedBox(height: 16),
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            // Project Info Card
+                            return PremiumCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    project.title,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleLarge,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    project.description,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.label_outline,
+                                        size: 16,
+                                        color: AppTheme.textGrey,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'ID: ${project.id}',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall,
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          if (state.tasks.isEmpty) {
+                            return const Padding(
+                              padding: EdgeInsets.only(top: 40),
+                              child: Center(
+                                child: Text('No tasks created yet.'),
+                              ),
+                            );
+                          }
+
+                          final taskIndex = index - 1;
+                          final task = state.tasks[taskIndex];
+
+                          return PremiumCard(
+                            onTap: () async {
+                              final refreshed = await Navigator.of(context)
+                                  .push(
+                                    MaterialPageRoute(
+                                      builder: (_) => TaskDetailsScreen(
+                                        task: task,
+                                        mode: TaskDetailsMode.buyer,
+                                      ),
+                                    ),
+                                  );
+                              if (refreshed == true && context.mounted) {
+                                context.read<TaskBloc>().add(
+                                  LoadProjectTasks(project.id),
+                                );
+                              }
+                            },
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        task.title,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
+                                    StatusChip.forStatus(task.status),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '\$${task.hourlyRate}/hr',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.darkNavy,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    if (task.assigneeId != 0)
+                                      Chip(
+                                        avatar: const Icon(
+                                          Icons.person,
+                                          size: 14,
+                                        ),
+                                        label: Text(
+                                          'Dev ${task.assigneeId}',
+                                          style: const TextStyle(fontSize: 12),
+                                        ),
+                                        visualDensity: VisualDensity.compact,
+                                        backgroundColor: AppTheme.surfaceGrey,
+                                        side: BorderSide.none,
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  }
+                  return const Center(child: Text('No tasks loaded'));
+                },
+              ),
+            );
+          },
         ),
       ),
     );

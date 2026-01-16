@@ -3,6 +3,7 @@ from app.modules.users.models import UserRole
 
 class UserBase(BaseModel):
     email: EmailStr
+    full_name: str | None = None
 
 class UserCreate(UserBase):
     password: str

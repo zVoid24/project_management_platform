@@ -20,6 +20,10 @@ from app.modules.payments import models as payment_models
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Create tables with consistency check
+    import os
+    if not os.path.exists(settings.UPLOAD_DIR):
+        os.makedirs(settings.UPLOAD_DIR)
+
     retries = 5
     while retries > 0:
         try:

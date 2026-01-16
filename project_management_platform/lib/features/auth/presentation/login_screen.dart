@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'auth_bloc.dart';
+import 'register_screen.dart';
+import '../../../core/theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -35,12 +38,32 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
+      backgroundColor: Colors.white,
+      // appBar: AppBar(
+      //   backgroundColor: Colors.white,
+      //   elevation: 0,
+      //   // No title or leading for login usually, but added Makarya Logo placeholder
+      //   title: Row(
+      //     children: [
+      //       const Icon(
+      //         Icons.grid_view_rounded,
+      //         color: AppTheme.successGreen,
+      //         size: 24,
+      //       ), // Mock Logo
+      //       const SizedBox(width: 8),
+      //       Text(
+      //         'Makarya',
+      //         style: Theme.of(
+      //           context,
+      //         ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+      //       ),
+      //     ],
+      //   ),
+      // ),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
-            // Navigate based on role
             final role = state.user.role;
             if (role == 'admin') {
               context.go('/admin');
@@ -63,59 +86,100 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'Welcome back',
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Hi, Welcome Back,',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.darkNavy,
+                        ),
+                      ),
+                      const SizedBox(height: 48),
+
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          hintText: 'Placeholder',
+                        ),
+                        validator: (value) =>
+                            value?.isEmpty ?? true ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          hintText: 'At least 8 character',
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Sign in to manage projects and paid tasks.',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        obscureText: _obscurePassword,
+                        validator: (value) =>
+                            value?.isEmpty ?? true ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {},
+                          child: const Text(
+                            'Forgot password?',
+                            style: TextStyle(color: AppTheme.primaryBlue),
                           ),
                         ),
-                        const SizedBox(height: 24),
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: const InputDecoration(
-                            labelText: 'Email',
-                            prefixIcon: Icon(Icons.email_outlined),
+                      ),
+                      const SizedBox(height: 32),
+                      ElevatedButton(
+                        onPressed: _onLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 56),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          validator: (value) =>
-                              value?.isEmpty ?? true ? 'Required' : null,
                         ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordController,
-                          decoration: const InputDecoration(
-                            labelText: 'Password',
-                            prefixIcon: Icon(Icons.lock_outline),
+                        child: const Text('Sign In'),
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Don\'t have an account? ',
+                            style: TextStyle(color: AppTheme.textGrey),
                           ),
-                          obscureText: true,
-                          validator: (value) =>
-                              value?.isEmpty ?? true ? 'Required' : null,
-                        ),
-                        const SizedBox(height: 24),
-                        FilledButton(
-                          onPressed: _onLogin,
-                          child: const Text('Continue'),
-                        ),
-                      ],
-                    ),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterScreen(),
+                              ),
+                            ),
+                            child: const Text(
+                              'Register',
+                              style: TextStyle(
+                                color: AppTheme.primaryBlue,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),

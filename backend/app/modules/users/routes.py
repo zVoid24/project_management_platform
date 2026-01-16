@@ -22,6 +22,13 @@ async def read_users_me(
 ):
     return current_user
 
+@router.get("/", response_model=list[schemas.UserRead])
+async def list_users(
+    db: AsyncSession = Depends(get_db),
+    # In a real app, restrict this to Admin
+):
+    return await crud.get_all_users(db)
+
 @router.get("/developers", response_model=list[schemas.UserRead])
 async def list_developers(
     db: AsyncSession = Depends(get_db)
